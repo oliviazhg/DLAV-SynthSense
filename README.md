@@ -68,7 +68,7 @@ motionnet
 There is a base config, dataset and model class, and each model has its own config, dataset and model class that inherit from the base class.
 
 ## Data
-You can access the data [here](https://drive.google.com/file/d/1). We have provided three datasets of different difficulty levels: easy, medium and hard.
+You can access the data [here](https://drive.google.com/drive/folders/1ta4Mw09DXrk3MPM4XGwwG79VZzE4NfLJ). We have provided three datasets of different difficulty levels: easy, medium and hard.
 You will be using the easy dataset for the first milestone, and the medium and hard datasets for the second and third milestones, respectively.
 
 
@@ -93,4 +93,5 @@ You are asked to complete three parts of the model in `motionnet/models/ptr/ptr_
 You can find the instructions and some hints in the file itself. 
 
 ## Submission
-You could follow the steps in the [kaggle competition](https://www.kaggle.com/c/epfl-dlav-2024/overview) to submit your results and compare them with the other students in the leaderboard.
+You could follow the steps in the [easy kaggle competition](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-2024/overview) to submit your results and compare them with the other students in the leaderboard.
+Here are the [medium](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-medium/overview) and [hard](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-hard/overview) competitions for the second and third milestones, respectively.
