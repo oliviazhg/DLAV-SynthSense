@@ -75,7 +75,7 @@ You will be using the easy dataset for the first milestone, and the medium and h
 ## Your Task
 Your task is to complete the PTR model and train it on the data we have provided. 
 The model is a transformer-based model that takes the past trajectory of the vehicle and its surrounding agents, along with the map, and predicts the future trajectory.
-![system](docs/assets/PTR.png)
+![system](https://github.com/vita-epfl/unitraj-DLAV/blob/main/docs/assets/PTR.png?raw=true)
 This is the architecture of the encoder part of model (where you need to implement). Supposing we are given the past t time steps for M agents and we have a feature vector of size $d_K$ for each agent at each time step, the encoder part of the model consists of the following steps:
 1. Add positional encoding to the input features at the time step dimension for distinguish between different time steps.
 2. Perform the temporal attention to capture the dependencies between the trajectories of each agent separately.
