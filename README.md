@@ -36,6 +36,7 @@ pip install -e .
 Finally, install Unitraj and login to wandb via:
 ```bash
 cd unitraj-DLAV # Go to the folder you cloned the repo
+pip install -r requirements.txt
 pip install -e .
 wandb login
 ```
