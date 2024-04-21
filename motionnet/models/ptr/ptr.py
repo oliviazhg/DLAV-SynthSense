@@ -264,7 +264,29 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
-        pass
+        T, B, N, H = agents_emb.size()
+
+        # Initialize positional encoding
+        pos_encoding = torch.arange(T).unsqueeze(1).expand(T, B, N).to(agents_emb.device)
+
+        # Add positional encoding to agent embeddings
+        agents_emb_with_pos = agents_emb + pos_encoding
+
+        # Iterate over each time step
+        agents_emb = []
+        for t in range(T):
+            # Extract embeddings at time step t
+            emb_t = agents_emb_with_pos[t]
+
+            # Apply attention mechanism considering agent masks
+            # You should use layer function here with src_key_padding_mask argument
+            attn_output = layer(emb_t, emb_t, src_key_padding_mask=agent_masks[:, t])
+
+            # Append attended embeddings
+            agents_emb.append(attn_output)
+
+        # Stack attended embeddings along time dimension
+        agents_emb = torch.stack(agents_emb)
         ################################################################
         return agents_emb
 
@@ -278,7 +300,22 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
-        pass
+        T, B, N, H = agents_emb.size()
+
+        agents_emb = []
+        for t in range(T):
+            # Extract embeddings at time step t
+            emb_t = agents_emb[t]
+
+            # Apply attention mechanism considering agent masks
+            # You should use layer function here with src_key_padding_mask argument
+            attn_output = layer(emb_t, emb_t, src_key_padding_mask=agent_masks[:, t])
+
+            # Append attended embeddings
+            agents_emb.append(attn_output)
+
+        # Stack attended embeddings along time dimension
+        agents_emb = torch.stack(agents_emb)
         ################################################################
         return agents_emb
 
@@ -306,7 +343,17 @@ class PTR(BaseModel):
 
         ######################## Your code here ########################
         # Apply temporal attention layers and then the social attention layers on agents_emb, each for L_enc times.
-        pass
+        
+        # agent_masks = 
+        layer = torch.arange(self.L_enc)
+    
+        for _ in range(self.L_enc):
+            # Temporal Attention
+            agents_emb = self.temporal_attn_fn(agents_emb, agent_masks, layer)
+    
+             # Social Attention
+            agents_emb = self.social_attn_fn(agents_emb, agent_masks, layer)
+
         ################################################################
 
         ego_soctemp_emb = agents_emb[:, :, 0]  # take ego-agent encodings only.
