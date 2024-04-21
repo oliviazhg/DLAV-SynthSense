@@ -1,1 +1,1 @@
-# DLAV-SynthSense
+# SynthSense
