@@ -344,15 +344,24 @@ class PTR(BaseModel):
         ######################## Your code here ########################
         # Apply temporal attention layers and then the social attention layers on agents_emb, each for L_enc times.
         
-        # agent_masks = 
+        agent_masks = torch.ones_like(agents_in[:, :, :, 0])  # Initialize all agents as present
+
+        # agent_masks = torch.ones_like(agents_emb[:, :, :, 0])  # Initialize all agents as present
+        agent_masks[agents_in[:, :, :, -1] == 0] = 0  # Mask out agents where the existence mask is 0
+
         layer = torch.arange(self.L_enc)
     
         for _ in range(self.L_enc):
+
+            agent_masks = self.update_masks(agents_in)  # Implement this function to update masks based on agent presence
+            
             # Temporal Attention
             agents_emb = self.temporal_attn_fn(agents_emb, agent_masks, layer)
     
              # Social Attention
             agents_emb = self.social_attn_fn(agents_emb, agent_masks, layer)
+
+            
 
         ################################################################
 
