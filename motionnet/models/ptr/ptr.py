@@ -265,47 +265,38 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
-        T, B, N, H = agents_emb.size()
+        # T, B, N, H = agents_emb.size()
 
-        # Initialize positional encoding from Positional Encoding Class
-        # positional_encoding = PositionalEncoding(d_model=H)
+        # # Reshape agent_masks to match the shape of agents_emb
+
+        # agent_masks = agent_masks.permute(0, 2, 1)
+        # agent_masks = agent_masks.reshape(-1,T) # (N X B, T) flattens 
+        # agents_emb = agents_emb.reshape(T,B*N,H)
+
+        # # agent_masks[:, -1][agent_masks.sum(-1) == T_obs] = False  # Ensure that agent's that don't exist don't make NaN.
+        # # Positional Encoding
+        # agents_emb_with_pos_enc = self.pos_encoder(agents_emb)
+
+        # # breakpoint()
+        # # Apply temporal attaention using the provided layer
+        # attn_output = layer(agents_emb_with_pos_enc, src_key_padding_mask=agent_masks)
         
 
-        # Positional encoding to agents_emb
-        # agents_emb_with_pos_enc = PositionalEncoding(agents_emb)
+        # # Stack the output_embs to get the final output tensor
+        # agents_emb = torch.stack(attn_output, dim=0)  # (T, B, N, H)
 
-        # Reshape agent_masks to match the shape of agents_emb
-
-        agent_masks = agent_masks.permute(0, 2, 1)
-        agent_masks = agent_masks.reshape(-1,T) # (N X B, T) flattens 
-        # agent_masks = torch.flatten(agent_masks)
-        # agents_emb = agents_emb.permute(1,0,2,).contiguous() # (T,B,N,H) -> (B, T, N, H)
-        # breakpoint()
-        # agents_emb_with_mask = agents_emb[agent_masks]
-        agents_emb = agents_emb.reshape(T,B*N,H)
-        # breakpoint()
-        agents_emb_with_pos_enc = self.pos_encoder(agents_emb)
-
-        # Iterate over each time step
-        # attended_emb = [] # agents given temporal attention
-
-        # for t in range(T):
-        #     # Get embeddings for the current time step
-        #     emb_t = agents_emb_with_pos_enc[t]  # (B, N, H)
-
-        # breakpoint()
-        # Apply temporal attaention using the provided layer
-        attn_output = layer(agents_emb_with_pos_enc, src_key_padding_mask=agent_masks)
-
-        # # Append output to the list
-        # attended_emb.append(attn_output)
-
-        # Stack the output_embs to get the final output tensor
-        agents_emb = torch.stack(attn_output, dim=0)  # (T, B, N, H)
+        T_obs = agents_emb.size(0)
+        B = agent_masks.size(0)
+        num_agents = agent_masks.size(2)
+        temp_masks = agent_masks.permute(0, 2, 1).reshape(-1, T_obs)
+        temp_masks[:, -1][temp_masks.sum(-1) == T_obs] = False  # Ensure that agent's that don't exist don't make NaN.
+        agents_temp_emb = layer(self.pos_encoder(agents_emb.reshape(T_obs, B * (num_agents), -1)),
+                                src_key_padding_mask=temp_masks)
+        return agents_temp_emb.view(T_obs, B, num_agents, -1)
 
 
         ################################################################
-        return agents_emb
+        # return agents_emb
 
     def social_attn_fn(self, agents_emb, agent_masks, layer):
         '''
@@ -317,27 +308,39 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
-        T, B, N, H = agents_emb.size()
+        # T, B, N, H = agents_emb.size()
 
-        # Initialize a list to store attended embeddings
-        attended_emb = [] # agents given social attention
+        # agent_masks = agent_masks.permute(0, 2, 1)
+        # agent_masks = agent_masks.reshape(-1,T) # (N X B, T) flattens 
+        # # agent_masks[:, -1][agent_masks.sum(-1) == T] = False  # Ensure that agent's that don't exist don't make NaN.
+
+        # agents_emb = agents_emb.reshape(T,B*N,H)
+
+        # # Apply attention mechanism considering agent masks
+        # attn_output = layer(agents_emb , src_key_padding_mask=agent_masks)
+        # # attn_output = (attn_output,)
         
-        for t in range(T):
-            # Extract embeddings at time step t
-            emb_t = agents_emb[t]
-            breakpoint()
+        # # breakpoint()
+        # # Stack attended embeddings along time dimension
+        # agents_emb = torch.stack(attn_output, dim=0)  # (T, B, N, H)
 
-            # Apply attention mechanism considering agent masks
-            attn_output = layer(emb_t, src_key_padding_mask=agent_masks[:, t, :])
+        # num_agents = agent_masks.size(2)
+        # num_ego = agents_emb.size(0)
 
-            # Append attended embeddings
-            attended_emb.append(attn_output)
+        # num_agents_without_ego_agents = num_ego - num_agents
+        # self._M = 0
+        self._M = agents_emb.size(2) - 1
 
-        # Stack attended embeddings along time dimension
-        agents_emb = torch.stack(attended_emb, dim=0)  # (T, B, N, H)
+        T_obs = agents_emb.size(0)
+        B = agent_masks.size(0)
+        agents_emb = agents_emb.permute(2, 1, 0, 3).reshape(self._M + 1, B * T_obs, -1)
+        agents_soc_emb = layer(agents_emb, src_key_padding_mask=agent_masks.view(-1, self._M+1))
+        agents_soc_emb = agents_soc_emb.view(self._M+1, B, T_obs, -1).permute(2, 1, 0, 3)
+        return agents_soc_emb
+
 
         ################################################################
-        return agents_emb
+        # return agents_emb
 
     def _forward(self, inputs):
         '''
@@ -362,25 +365,20 @@ class PTR(BaseModel):
         agents_emb = self.agents_dynamic_encoder(agents_tensor).permute(1, 0, 2, 3)  # T, B, N, H
 
         ######################## Your code here ########################
-        # Apply temporal attention layers and then the social attention layers on agents_emb, each for L_enc times.
+        # # Apply temporal attention layers and then the social attention layers on agents_emb, each for L_enc times.
 
-        # Generate initial mask based on agents_emb before any attention
-        agent_masks = torch.any(torch.abs(agents_emb), dim=-1).float()
+        # # Generate initial mask based on agents_emb before any attention
+        # agent_masks = torch.any(torch.abs(agents_emb), dim=-1).float()
         
+        # # Apply temporal attention
+        # agents_emb_temporal = self.temporal_attn_fn(agents_emb, agent_masks, self.temporal_attn_layers)
+        
+        # # Apply social attention
+        # self.social_attn_fn(agents_emb_temporal, agent_masks, self.social_attn_layers)
 
-     
-            # Apply temporal attention
-        agents_emb_temporal = self.temporal_attn_fn(agents_emb, agent_masks, self.temporal_attn_layers)
-
-            # Update mask based on the result of temporal attention
-        agent_masks = torch.any(torch.abs(agents_emb_temporal), dim=-1).float()
-
-            # Apply social attention
-        agents_emb_social = self.social_attn_fn(agents_emb_temporal, agent_masks, self.social_attn_layers)
-
-        #     # Update agents_emb for the next iteration
-        # agents_emb = agents_emb_social
-            
+        for i in range(self.L_enc):
+            agents_emb = self.temporal_attn_fn(agents_emb, opps_masks, layer=self.temporal_attn_layers[i])
+            agents_emb = self.social_attn_fn(agents_emb, opps_masks, layer=self.social_attn_layers[i])
 
         ################################################################
 
